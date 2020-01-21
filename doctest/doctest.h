@@ -1629,7 +1629,7 @@ struct DOCTEST_INTERFACE CurrentTestCaseStats
 
 struct DOCTEST_INTERFACE TestCaseException
 {
-    String error_string;
+    char const* error_string;
     bool   is_crash;
 };
 
@@ -3920,7 +3920,7 @@ namespace {
     };
 #else // DOCTEST_CONFIG_POSIX_SIGNALS || DOCTEST_CONFIG_WINDOWS_SEH
 
-    void reportFatal(const std::string&);
+    void reportFatal(const char*);
 
 #ifdef DOCTEST_PLATFORM_WINDOWS
 
@@ -4081,10 +4081,10 @@ namespace {
     }
 
 #if defined(DOCTEST_CONFIG_POSIX_SIGNALS) || defined(DOCTEST_CONFIG_WINDOWS_SEH)
-    void reportFatal(const std::string& message) {
+    void reportFatal(const char* message) {
         g_cs->failure_flags |= TestCaseFailureReason::Crash;
 
-        DOCTEST_ITERATE_THROUGH_REPORTERS(test_case_exception, {message.c_str(), true});
+        DOCTEST_ITERATE_THROUGH_REPORTERS(test_case_exception, {message, true});
 
         while(g_cs->subcasesStack.size()) {
             g_cs->subcasesStack.pop_back();
@@ -4780,7 +4780,7 @@ namespace {
 
             xml.scopedElement("Exception")
                     .writeAttribute("crash", e.is_crash)
-                    .writeText(e.error_string.c_str());
+                    .writeText(e.error_string);
         }
 
         void subcase_start(const SubcaseSignature& in) override {
@@ -5852,8 +5852,9 @@ int Context::run() {
                 } catch(const TestFailureException&) {
                     p->failure_flags |= TestCaseFailureReason::AssertFailure;
                 } catch(...) {
+                    auto val = translateActiveException();
                     DOCTEST_ITERATE_THROUGH_REPORTERS(test_case_exception,
-                                                      {translateActiveException(), false});
+                                                      {val.c_str(), false});
                     p->failure_flags |= TestCaseFailureReason::Exception;
                 }
 #endif // DOCTEST_CONFIG_NO_EXCEPTIONS
